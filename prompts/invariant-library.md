@@ -56,6 +56,18 @@ the validator should have rejected.
 - **Common violation**: Validator checks headers, parser checks content — gap between them
 - **Check method**: Generate inputs at the boundary, verify both agree
 
+## AtomicGuard(sideEffect, annotation)
+A side effect (API call, child task creation, external post) that is
+guarded by an annotation must not be repeated if the annotation write
+fails. The guard and the effect must be effectively atomic.
+- **Common violation**: Post comment → update annotation. If update fails
+  (resource version conflict), next reconcile re-posts the comment.
+- **Check method**: Trace the failure path: what happens if the side effect
+  succeeds but the annotation persistence fails? Three safe patterns:
+  1. Write annotation first (optimistic), perform effect, revert on failure
+  2. Use retry-on-conflict for the annotation write
+  3. Make the side effect itself idempotent (check if already done)
+
 ## TypePreservation(source, destination)
 When converting between representations, type information is not lost.
 Integers stay integers, booleans stay booleans.

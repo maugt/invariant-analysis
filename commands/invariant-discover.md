@@ -65,5 +65,6 @@ Reference these by name when they apply:
 - **NoFalsePositive(validator, validInputs)** — valid inputs must never be rejected
 - **NoFalseNegative(validator, invalidInputs)** — invalid inputs must always be caught
 - **IdempotentOperation(operation)** — running twice produces same result as running once
+- **AtomicGuard(sideEffect, annotation)** — if a guarded side effect succeeds but the annotation write fails, the next reconcile must not repeat the effect
 - **ParseValidateConsistency(parser, validator)** — parser and validator agree on what's valid
 - **TypePreservation(source, destination)** — type information is not lost when converting between representations

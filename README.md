@@ -126,6 +126,10 @@ data/                               # Experimental data
 SPEC-DSL.md                         # Spec format documentation
 ```
 
+## Related work
+
+- **SelfSpec** — [Self-Spec: Model-Authored Specifications for Reliable LLM Code Generation](https://openreview.net/forum?id=6pr7BUGkLp). SelfSpec has the LLM design its own specification format, then generate code that matches it. Our `/exhaustive-verify` skill was inspired by SelfSpec's finding that forced exhaustive reasoning (tracing every exit path) catches bugs that targeted invariant checks miss — specifically resource cleanup asymmetries like missing `cmd.Wait()` after `Process.Kill()`. SelfSpec operates at the single-function level; our invariant analysis operates at cross-component boundaries. Together they cover the full spectrum.
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).

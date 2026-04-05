@@ -68,6 +68,18 @@ fails. The guard and the effect must be effectively atomic.
   2. Use retry-on-conflict for the annotation write
   3. Make the side effect itself idempotent (check if already done)
 
+## PathSymmetry(function, resource)
+Every code path through a function that acquires or interacts with a
+resource must handle it consistently. If the happy path cleans up but
+an error path doesn't, it's violated.
+- **Common violation**: Process.Kill() without cmd.Wait() on timeout path,
+  but cmd.Wait() on normal exit. File opened in one branch but not closed
+  in the error branch. Lock acquired but not released on panic path.
+- **Check method**: List every return/exit point in the function. For each
+  resource (process, file, lock, connection, timer), verify cleanup happens
+  on ALL paths, not just the happy path. The `defer` keyword is the fix
+  for most cases, but some resources need path-specific handling.
+
 ## TypePreservation(source, destination)
 When converting between representations, type information is not lost.
 Integers stay integers, booleans stay booleans.

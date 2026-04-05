@@ -1,0 +1,5 @@
+{
+  "name": "invariant-analysis",
+  "description": "Cross-component invariant discovery and verification for LLM agent PRs. Find unstated contracts between components, verify them against diffs for ~$0.10 per check.",
+  "version": "0.1.0"
+}

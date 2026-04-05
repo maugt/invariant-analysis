@@ -14,22 +14,22 @@ Transform a rough task description into a structured, agent-ready specification.
 
 3. **Check scope**: If the task touches more than 5 files or requires changes across multiple modules, recommend decomposition. Large tasks burn tokens on incremental build failures. Suggest how to split.
 
-4. **Identify invariants**: Two categories:
-
-   **Cross-component** (boundaries between changed code and its callers/consumers):
+4. **Identify invariants** (cross-component boundaries):
    - What does this component assume about the other's output?
    - Could a refactor break this assumption silently?
-   
-   **Intra-function** (exit paths and resource lifecycle within modified functions):
-   - What resources does this function acquire? (processes, files, locks, connections, timers)
-   - How many exit paths does it have? (early returns, error paths, normal completion)
-   - Does every exit path release every resource?
-   - If the function is modifying an existing function with N exit paths, state explicitly which paths must handle the new resource
+   - Name using ENFORCE/VERIFY/CHECK
 
-   Name each invariant using ENFORCE/VERIFY/CHECK:
-     - ENFORCE: agent must add defensive code (guard clauses, validation, cleanup)
-     - VERIFY: agent must add tests
-     - CHECK: both
+5. **Identify enumerations** (things the agent must list exhaustively before coding):
+   For each modified function, ask: **what needs to be enumerated?**
+   
+   - **Exit paths × resources**: How many ways can this function return? What resources (processes, files, locks, connections, timers) does it acquire? Every exit path must handle every resource.
+   - **Enum values × switch cases**: Does the function switch on a type/enum? List every value. What happens when a new value is added later?
+   - **Config fields × coverage**: Are new fields added to a struct? List every place that struct is read — do all consumers handle the new field?
+   - **Callers × new behavior**: Is the function signature or contract changing? List every caller. Do they all handle the new behavior?
+   - **Error types × handling**: What errors can this function produce? Is each one returned, logged, or silently swallowed? Is handling consistent?
+   - **State mutations × failure paths**: If step A succeeds and step B fails, is the state left consistent?
+   
+   The bug is always in case N when only N-1 are handled. If the spec forces the agent to list all N, it can't silently skip one.
 
 5. **Write the spec** with these sections:
 
@@ -55,11 +55,17 @@ exact commands to build and test
 - Edge cases to cover
 
 ## Invariants
-<!-- Cross-component -->
 ENFORCE InvariantName: property spanning components A and B
 VERIFY InvariantName: property spanning components A and B
-<!-- Intra-function (exit paths / resources) -->
-ENFORCE PathSymmetry(functionName, resource): every exit path must release/cleanup resource
+
+## Enumerations
+Before implementing, the agent MUST list all cases for each enumeration below.
+The implementation must handle every listed case — no silent gaps.
+
+- Exit paths in functionName: [list them, or "agent must enumerate before coding"]
+- Switch cases for TypeName: [list values, or "agent must list all variants"]
+- Callers of changedFunction: [list them, or "agent must grep and list"]
+- Config fields affected: [list them]
 
 ## DO NOT change
 - Files or behaviors that must not be touched
@@ -75,8 +81,8 @@ ENFORCE PathSymmetry(functionName, resource): every exit path must release/clean
 - **Acceptance criteria must be testable**. "Works correctly" is not testable. "Returns error for nil input" is.
 - **Build/test must be exact commands**. Not "run the tests" — the actual `cd foo && go test ./...` command.
 - **DO NOT change must be specific**. Not "don't break anything" — name the specific files, functions, or behaviors.
-- **Invariants cover two levels**. Cross-component (boundaries between files/modules) AND intra-function (exit paths, resource lifecycle). Both catch real bugs that tests miss.
-- **If the task modifies a function with multiple exit paths**, add a PathSymmetry invariant naming the function and each resource. This is the #1 source of bugs that all other review methods miss.
+- **Invariants check cross-component contracts**. Boundaries between files/modules where one component assumes something about another.
+- **Enumerations force exhaustive coverage**. The bug is always in case N when only N-1 are handled. If the spec lists all N, the agent can't skip one. Apply to: exit paths, switch cases, config fields, callers, error types, state mutation steps.
 - **Include the dangerous commands warning** if the task involves process execution, file watching, or streaming: agent must not use `tail -f`, `watch`, or other blocking commands.
 
 ## Anti-patterns to flag

@@ -1,14 +1,13 @@
 {
-  "version": "1",
+  "name": "invariant-analysis",
+  "owner": {
+    "name": "Giles Douglas"
+  },
   "plugins": [
     {
       "name": "invariant-analysis",
-      "description": "Cross-component invariant discovery and verification for LLM agent PRs",
-      "version": "0.1.0",
-      "source": {
-        "type": "github",
-        "repo": "maugt/invariant-analysis"
-      }
+      "source": ".",
+      "description": "Cross-component invariant discovery and verification for LLM agent PRs"
     }
   ]
 }

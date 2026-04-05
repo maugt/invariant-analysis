@@ -139,14 +139,8 @@ See `prompts/invariant-library.md` for full definitions with check methods.
 ### As a Claude Code plugin
 
 ```bash
-/plugin install invariant-analysis@maugt
-```
-
-Or add the marketplace to your settings and install:
-
-```bash
 /plugin marketplace add maugt/invariant-analysis
-/plugin install invariant-analysis
+/plugin install invariant-analysis@invariant-analysis
 ```
 
 ### Manual install

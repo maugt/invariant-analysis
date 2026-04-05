@@ -14,11 +14,20 @@ Transform a rough task description into a structured, agent-ready specification.
 
 3. **Check scope**: If the task touches more than 5 files or requires changes across multiple modules, recommend decomposition. Large tasks burn tokens on incremental build failures. Suggest how to split.
 
-4. **Identify invariants**: Look at boundaries between the changed code and its callers/consumers. For each boundary, ask:
+4. **Identify invariants**: Two categories:
+
+   **Cross-component** (boundaries between changed code and its callers/consumers):
    - What does this component assume about the other's output?
    - Could a refactor break this assumption silently?
-   - Name the invariant using ENFORCE/VERIFY/CHECK:
-     - ENFORCE: agent must add defensive code (guard clauses, validation)
+   
+   **Intra-function** (exit paths and resource lifecycle within modified functions):
+   - What resources does this function acquire? (processes, files, locks, connections, timers)
+   - How many exit paths does it have? (early returns, error paths, normal completion)
+   - Does every exit path release every resource?
+   - If the function is modifying an existing function with N exit paths, state explicitly which paths must handle the new resource
+
+   Name each invariant using ENFORCE/VERIFY/CHECK:
+     - ENFORCE: agent must add defensive code (guard clauses, validation, cleanup)
      - VERIFY: agent must add tests
      - CHECK: both
 
@@ -46,9 +55,11 @@ exact commands to build and test
 - Edge cases to cover
 
 ## Invariants
-ENFORCE InvariantName: property description
-VERIFY InvariantName: property description
-CHECK InvariantName: property description
+<!-- Cross-component -->
+ENFORCE InvariantName: property spanning components A and B
+VERIFY InvariantName: property spanning components A and B
+<!-- Intra-function (exit paths / resources) -->
+ENFORCE PathSymmetry(functionName, resource): every exit path must release/cleanup resource
 
 ## DO NOT change
 - Files or behaviors that must not be touched
@@ -64,7 +75,8 @@ CHECK InvariantName: property description
 - **Acceptance criteria must be testable**. "Works correctly" is not testable. "Returns error for nil input" is.
 - **Build/test must be exact commands**. Not "run the tests" — the actual `cd foo && go test ./...` command.
 - **DO NOT change must be specific**. Not "don't break anything" — name the specific files, functions, or behaviors.
-- **Invariants should span boundaries**. Single-function properties aren't worth stating. Cross-component contracts are.
+- **Invariants cover two levels**. Cross-component (boundaries between files/modules) AND intra-function (exit paths, resource lifecycle). Both catch real bugs that tests miss.
+- **If the task modifies a function with multiple exit paths**, add a PathSymmetry invariant naming the function and each resource. This is the #1 source of bugs that all other review methods miss.
 - **Include the dangerous commands warning** if the task involves process execution, file watching, or streaming: agent must not use `tail -f`, `watch`, or other blocking commands.
 
 ## Anti-patterns to flag

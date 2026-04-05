@@ -1,15 +1,15 @@
-Exhaustive path and resource verification for a PR or set of changed files. Takes a PR number or file paths as arguments.
+Exhaustive enumeration and coverage verification for a PR or set of changed files. Takes a PR number or file paths as arguments.
 
-This skill complements `/invariant-verify` (which checks named cross-component contracts). This skill does intra-function exhaustive analysis — tracing every code path to find asymmetries.
+This skill complements `/invariant-verify` (which checks named cross-component contracts). This skill forces exhaustive enumeration — listing all cases, paths, values, or states, then checking that every one is handled. Bugs hide where enumeration is incomplete.
 
 ## Steps
 
 1. If a PR number is provided, run `gh pr diff <number>` to get the diff
 2. If file paths are provided, read those files directly
 
-For every function that was added or substantially modified:
+For every function that was added or substantially modified, apply ALL of the following enumerations:
 
-### Step 1: List all exit paths
+### Step 1: Exit paths
 
 Enumerate every way the function can return:
 - Normal return (end of function)
@@ -17,35 +17,43 @@ Enumerate every way the function can return:
 - Deferred cleanup paths
 - Panic/recover paths (if applicable)
 
-### Step 2: Resource tracking
+Then for each resource acquired (process, file, lock, connection, timer, channel, goroutine): is it released on EVERY path?
 
-For each resource acquired in the function (process, file handle, lock, connection, timer, channel, goroutine):
-- Where is it acquired?
-- On which exit paths is it released?
-- On which exit paths is it NOT released?
-- Is `defer` used? If not, why not?
+### Step 2: Cases and branches
 
-### Step 3: Error handling symmetry
+For every switch/case, if/else chain, or type assertion:
+- List all possible values of the switched expression
+- Are all values handled? Is the default case correct or a silent swallow?
+- For enum types: does the switch cover every variant? What happens when a new variant is added?
+
+### Step 3: Error handling consistency
 
 For each error that can occur:
 - Is it returned, logged, or swallowed?
 - Is the handling consistent with how other errors in the same function are handled?
 - If one error path logs + returns, but another silently swallows, flag it
 
-### Step 4: Input edge cases
+### Step 4: Input domain
 
 For each parameter:
 - What happens with nil/zero/empty?
-- What happens with maximum values?
+- What happens at boundary values (max int, empty string, empty slice, nil map)?
 - What happens with negative values (for numerics)?
 - Are these cases tested?
 
-### Step 5: State mutation consistency
+### Step 5: State mutation
 
 If the function modifies shared state (struct fields, maps, external resources):
 - Is the modification visible on ALL exit paths, or only some?
 - Could a partial mutation leave the system in an inconsistent state?
-- Is the mutation order-dependent? (e.g., update annotation THEN post comment)
+- If step A succeeds and step B fails, is the state rolled back or left inconsistent?
+
+### Step 6: Caller impact
+
+If the function signature or behavior changed:
+- List all callers (grep for the function name)
+- Does each caller handle the new behavior correctly?
+- Could a caller pass an input that the function doesn't expect?
 
 ## Output format
 
@@ -54,25 +62,21 @@ If the function modifies shared state (struct fields, maps, external resources):
 
 ## function_name (file:line)
 
-### Exit paths: N total
-1. Normal return (line X)
-2. Error return: condition (line Y)
-3. ...
-
-### Resources
-| Resource | Acquired | Released on path 1 | Released on path 2 | ... |
-|----------|----------|-------------------|-------------------|-----|
-| cmd      | line X   | Yes (Wait)        | NO — zombie leak  | ... |
+### Enumerations
+- Exit paths: N
+- Switch/case branches: N (M values possible, K handled)
+- Error sources: N
+- Parameters: N
 
 ### Findings
-- **PathSymmetry VIOLATED**: resource not released on path N
-  Counterexample: [specific input/condition that triggers the leaky path]
+- **VIOLATED**: [category] — description
+  Counterexample: [specific input/condition]
 
-- **InputEdge VIOLATED**: nil input causes panic at line X
-  Counterexample: call function(nil) → panic
+- **GAP**: [category] — description
+  Missing: [what's not covered]
 
-### No issues found
-[only if genuinely clean after checking all paths]
+### Clean
+[only if genuinely clean after all enumerations]
 
 ## Summary
 N functions analyzed. X findings across Y functions.
@@ -80,8 +84,8 @@ N functions analyzed. X findings across Y functions.
 
 ## Rules
 
-- Be exhaustive: check EVERY exit path, not just the obvious ones
-- Be concrete: every finding needs a specific counterexample
+- The technique is **enumerate then verify coverage**. List everything first, check handling second.
+- Be concrete: every finding needs a specific counterexample or a specific missing case
 - Don't review style or naming — only correctness
-- Focus on: resource leaks, path asymmetry, unhandled edge cases, inconsistent error handling
-- If a function has >5 exit paths, it's worth extra scrutiny — complexity breeds asymmetry
+- If a function has >5 exit paths or >5 switch cases, it's worth extra scrutiny
+- The most common bug pattern: N cases exist, N-1 are handled, the Nth is silently dropped

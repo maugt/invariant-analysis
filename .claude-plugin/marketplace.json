@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "invariant-analysis",
-      "source": ".",
+      "source": "./",
       "description": "Cross-component invariant discovery and verification for LLM agent PRs"
     }
   ]

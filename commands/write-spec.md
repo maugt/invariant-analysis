@@ -12,7 +12,27 @@ Transform a rough task description into a structured, agent-ready specification.
    - Related code the agent should read for context
    - Configuration that must not be hardcoded
 
-3. **Check scope**: If the task touches more than 5 files or requires changes across multiple modules, recommend decomposition. Large tasks burn tokens on incremental build failures. Suggest how to split.
+3. **Check scope and decompose if needed**: Measure the blast radius before writing the spec.
+   
+   Run these checks:
+   - Count files to modify (`wc -l` on each)
+   - Count functions that change (`grep -c "func "`)
+   - Count tests that would break (`grep -c "func Test"` in test files)
+   - Estimate total lines changed
+   
+   Decompose when ANY of:
+   - More than 5 files touched
+   - More than 300 lines of production code changing
+   - More than 20 tests need updating
+   - The change has a safe "wrap then refactor" split (introduce new abstraction first without changing behavior, then migrate callers in a second task)
+   
+   The decomposition pattern for refactors:
+   - **Task 1**: Introduce the new abstraction alongside the old code. All tests pass unchanged. Zero behavior change. This proves the abstraction works.
+   - **Task 2**: Migrate callers to the new abstraction. Update tests. Delete old code. This is where bugs happen — apply full invariant/enumeration treatment.
+   
+   For each subtask, write a separate spec. The subtask specs should have explicit dependencies (task 2 blocked by task 1).
+   
+   If the task can't be decomposed (tightly coupled changes), warn the user — large monolithic tasks have a high failure rate (~$5+ burned on VY-162).
 
 4. **Identify invariants** (cross-component boundaries):
    - What does this component assume about the other's output?

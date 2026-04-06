@@ -130,6 +130,10 @@ SPEC-DSL.md                         # Spec format documentation
 
 - **SelfSpec** — [Self-Spec: Model-Authored Specifications for Reliable LLM Code Generation](https://openreview.net/forum?id=6pr7BUGkLp). SelfSpec has the LLM design its own specification format, then generate code that matches it. Our `/exhaustive-verify` skill was inspired by SelfSpec's finding that forced exhaustive reasoning (tracing every exit path) catches bugs that targeted invariant checks miss — specifically resource cleanup asymmetries like missing `cmd.Wait()` after `Process.Kill()`. SelfSpec operates at the single-function level; our invariant analysis operates at cross-component boundaries. Together they cover the full spectrum.
 
+- **Verina** — [Verina: Benchmarking Verifiable Code Generation](https://openreview.net/forum?id=0A4Uf88pog) ([github](https://github.com/sunblaze-ucb/verina)). Verina separates code, formal specification (preconditions/postconditions), and proof as distinct outputs. Our key takeaway: postconditions should be prescribed as test implementations, not acceptance criteria. When agents hand-compute expected test values, they get them wrong (observed in both goal-spec and transformation-spec variants). When they verify postconditions algebraically (`listToNat(result) == listToNat(l1) + listToNat(l2)`), tests are correct by construction. This is Verina's insight applied to informal specs.
+
+- **Design by Contract** (Bertrand Meyer, Eiffel, 1986). Our invariant library (ENFORCE/VERIFY/CHECK) is design by contract for LLM agents in weakly-typed languages. In strongly-typed languages (Haskell, Rust), most of our intra-function invariants are enforced at compile time. Our unique value is architectural constraints spanning language/deployment boundaries that no type system reaches.
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).

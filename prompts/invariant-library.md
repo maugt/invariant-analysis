@@ -80,6 +80,19 @@ an error path doesn't, it's violated.
   on ALL paths, not just the happy path. The `defer` keyword is the fix
   for most cases, but some resources need path-specific handling.
 
+## DataExposure(secretReference, persistedResource)
+Values that reference a secret by indirection (e.g. K8s secretKeyRef, HashiCorp
+Vault reference, AWS Parameter Store reference) must not be converted to literal
+string values before being persisted to a resource that is visible to other
+principals (CRD spec, etcd, config file, log line).
+- **Common violation**: Function that "overrides" an env var by replacing a
+  secretKeyRef with a literal value, then the resource is persisted. The secret
+  becomes plaintext in the resource and anyone with read access can see it.
+- **Check method**: Trace the lifecycle of any credential from source (Secret)
+  to destination (persisted resource). At every step, confirm the credential is
+  still a reference, not a literal. If the destination is visible to other
+  principals (read RBAC, etcd, backups), a literal credential there is a leak.
+
 ## TypePreservation(source, destination)
 When converting between representations, type information is not lost.
 Integers stay integers, booleans stay booleans.

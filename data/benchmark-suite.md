@@ -140,3 +140,40 @@ For each benchmark case × spec format:
 2. **Transformation spec**: Current state matrix + exact delta + consistency check
 3. **Enumeration spec**: Goal + forced enumeration of all cases before coding
 4. **Combined**: Transformation + enumeration + cross-component invariants
+
+## Cross-language testing
+
+The benchmark cases above are Go/K8s-specific, but the invariant patterns are language-agnostic. To validate that invariant analysis adds value across the type-system spectrum, run the same verification skills against PRs in different languages.
+
+### Expected value by language
+
+| Invariant | Go | TypeScript | Java | Rust | Haskell |
+|---|---|---|---|---|---|
+| TotalCoverage | High | Medium (`strict` + `never`) | Medium (sealed classes) | Low (exhaustive match) | None (compiler) |
+| PathSymmetry | High | High (async cleanup is hard) | Medium (try-with-resources) | Low (ownership + Drop) | None (linear types) |
+| NilSafety | High | Medium (`strictNullChecks`) | Medium (`Optional`) | None (no null) | None (no null) |
+| AtomicGuard | High | High (async state + promises) | High (mutable state + exceptions) | Medium (ownership helps) | Low (STM monad) |
+| Cross-component | High | **High** | **High** | **High** | **High** |
+
+Cross-component invariants (config consistency, API contracts, deployment boundaries) provide value regardless of language — no type system encodes "the config file and the code agree."
+
+### How to port
+
+1. Pick a PR in the target language that touches multiple files/services
+2. Run `/invariant-discover` against the changed files
+3. Run `/exhaustive-verify` against the PR diff
+4. Score: how many findings are real bugs vs already caught by the type system/compiler?
+
+The ratio of real findings to false positives indicates whether the invariant library needs language-specific tuning.
+
+### TypeScript-specific patterns to watch for
+
+- **Async PathSymmetry**: `await` creates implicit exit paths. A `try` block with multiple `await` calls can exit at any one — resource cleanup in `finally` may not cover all cases
+- **Type narrowing gaps**: TypeScript narrows types in `if` branches but not across async boundaries or callback closures
+- **`any` escape hatches**: Code that uses `any` bypasses all type checking — invariant analysis fills the gap
+
+### Java-specific patterns to watch for
+
+- **Checked exception asymmetry**: Some paths throw checked exceptions, others throw unchecked — inconsistent error handling
+- **Resource leaks in multi-resource try**: `try-with-resources` handles one resource well but multiple resources with dependencies can still leak
+- **Null in legacy code**: Even with `Optional`, older code paths pass null freely

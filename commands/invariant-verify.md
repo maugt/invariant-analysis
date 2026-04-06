@@ -10,7 +10,14 @@ Verify named invariants against a PR or set of changed files. Takes a PR number 
 
 1. If a PR number is provided, run `gh pr diff <number>` to get the diff
 2. If file paths are provided, read those files directly
-3. The user will provide invariants to check (or ask you to check all relevant ones)
+3. **Always check universal invariants first** (tier 1 — apply to every PR):
+   - **PathSymmetry**: every exit path must handle resources consistently
+   - **NilSafety**: nil/zero/empty inputs must not panic
+   - **AnnotationConsistency**: annotation constants centralized, not sprinkled
+   - **DataExposure**: secretKeyRef values must not become literal strings
+   - **IdempotentOperation**: running twice must equal running once
+4. Check codebase invariants from the repo's INVARIANTS.md if it exists
+5. Check ticket-specific invariants the user provides (or extracts from the PR description's `## Invariants` section)
 
 For each invariant:
 - **ENFORCE**: trace through the code — can you construct an input that violates the property? If yes, it's VIOLATED. Show the counterexample.

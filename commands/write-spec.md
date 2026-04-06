@@ -101,8 +101,12 @@ Write a helper function that verifies the postcondition, then use it in every te
 This eliminates hand-computation errors — the most common bug class in agent-written tests.
 
 ## Invariants
-ENFORCE InvariantName: property spanning components A and B
-VERIFY InvariantName: property spanning components A and B
+<!-- Reference named patterns by instantiation. DO NOT redefine universal patterns.
+     Universal invariants (PathSymmetry, NilSafety, AnnotationConsistency, etc.) are
+     checked on every PR automatically — don't list them here.
+     Only list invariants specific to THIS change that aren't covered by the universal set. -->
+BehaviorPreservation(oldFunc, newFunc)
+DataExposure(credentialSource, persistedResource)
 
 ## Patterns
 Use these design patterns to enforce constraints by construction:
@@ -132,6 +136,11 @@ The implementation must handle every listed case — no silent gaps.
 - **Acceptance criteria must be testable**. "Works correctly" is not testable. "Returns error for nil input" is.
 - **Build/test must be exact commands**. Not "run the tests" — the actual `cd foo && go test ./...` command.
 - **DO NOT change must be specific**. Not "don't break anything" — name the specific files, functions, or behaviors.
+- **Reference invariants by name, don't redefine**. The invariant library defines named patterns (PathSymmetry, DataExposure, TotalCoverage, etc). The spec should only instantiate them: `PathSymmetry(funcName, resourceName)`. Don't copy-paste the definition.
+- **Three tiers of invariants — only list tier 3 in the spec**:
+  - **Tier 1 (universal)**: PathSymmetry, NilSafety, AnnotationConsistency — checked on EVERY PR by `/exhaustive-verify`. Never list in the spec.
+  - **Tier 2 (codebase)**: Declared once in the repo's INVARIANTS.md, checked when touching relevant code. Reference by name if directly relevant.
+  - **Tier 3 (ticket-specific)**: Only invariants unique to THIS change. List in the spec.
 - **Invariants check cross-component contracts**. Boundaries between files/modules where one component assumes something about another.
 - **Enumerations force exhaustive coverage**. The bug is always in case N when only N-1 are handled. If the spec lists all N, the agent can't skip one. Apply to: exit paths, switch cases, config fields, callers, error types, state mutation steps.
 - **Postconditions are test implementations, not acceptance criteria**. If a postcondition can be expressed as a formula (`output == f(input)`), prescribe it as the test. Agents hand-computing expected values is the #1 source of test bugs. Property-based verification (check the formula) beats example-based verification (check hardcoded values).

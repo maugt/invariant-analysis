@@ -19,7 +19,24 @@ Transform a rough task description into a structured, agent-ready specification.
    - Could a refactor break this assumption silently?
    - Name using ENFORCE/VERIFY/CHECK
 
-5. **Identify enumerations** (things the agent must list exhaustively before coding):
+5. **Select design patterns** that enforce constraints structurally:
+   For each invariant or enumeration discovered, ask: **is there a pattern that makes this hold by construction?**
+   
+   If a pattern exists, prescribe it in the spec — the agent should implement the pattern, not a one-off fix. Common mappings:
+   
+   | Constraint | Pattern | Why |
+   |---|---|---|
+   | PathSymmetry (resource cleanup on all paths) | `defer` or extract `cleanup()` helper | Enforced by construction — can't forget a path |
+   | AtomicGuard (side effect + annotation) | Extract `guardedEffect()` with retry-on-conflict | One call site, atomicity guaranteed |
+   | TotalCoverage (all fields handled) | Reflection-based test | Catches drift automatically, no manual enumeration |
+   | AnnotationConsistency (constants centralized) | Single const block, linter rule | Convention enforced by location |
+   | BehaviorPreservation (same output after refactor) | Table-driven test with before/after | Regression caught mechanically |
+   
+   Check if the codebase already has an instance of the pattern. If yes, reference it ("follow the pattern in `step_review_dispatch.go`"). If no, the spec should introduce the pattern explicitly.
+   
+   Use `/design-patterns` to identify existing patterns in the affected code if unsure.
+
+6. **Identify enumerations** (things the agent must list exhaustively before coding):
    For each modified function, ask: **what needs to be enumerated?**
    
    - **Exit paths × resources**: How many ways can this function return? What resources (processes, files, locks, connections, timers) does it acquire? Every exit path must handle every resource.
@@ -31,7 +48,7 @@ Transform a rough task description into a structured, agent-ready specification.
    
    The bug is always in case N when only N-1 are handled. If the spec forces the agent to list all N, it can't silently skip one.
 
-5. **Write the spec** with these sections:
+7. **Write the spec** with these sections:
 
 ```markdown
 ## Files to modify
@@ -57,6 +74,11 @@ exact commands to build and test
 ## Invariants
 ENFORCE InvariantName: property spanning components A and B
 VERIFY InvariantName: property spanning components A and B
+
+## Patterns
+Use these design patterns to enforce constraints by construction:
+- PatternName for constraintName — "follow the pattern in existing_file.go:functionName"
+(If no existing pattern: describe the abstraction to introduce)
 
 ## Enumerations
 Before implementing, the agent MUST list all cases for each enumeration below.

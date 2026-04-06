@@ -71,6 +71,15 @@ exact commands to build and test
 - Specific test name or behavior to implement
 - Edge cases to cover
 
+IMPORTANT: When a postcondition can be expressed as a formula, prescribe it
+as the test implementation. Do NOT let the agent hand-compute expected values.
+
+Bad:  assert result == [8, 9, 9, 0, 0, 1]  (hand-computed, error-prone)
+Good: assert listToNat(result) == listToNat(l1) + listToNat(l2)  (algebraic, correct by construction)
+
+Write a helper function that verifies the postcondition, then use it in every test case.
+This eliminates hand-computation errors — the most common bug class in agent-written tests.
+
 ## Invariants
 ENFORCE InvariantName: property spanning components A and B
 VERIFY InvariantName: property spanning components A and B
@@ -105,6 +114,7 @@ The implementation must handle every listed case — no silent gaps.
 - **DO NOT change must be specific**. Not "don't break anything" — name the specific files, functions, or behaviors.
 - **Invariants check cross-component contracts**. Boundaries between files/modules where one component assumes something about another.
 - **Enumerations force exhaustive coverage**. The bug is always in case N when only N-1 are handled. If the spec lists all N, the agent can't skip one. Apply to: exit paths, switch cases, config fields, callers, error types, state mutation steps.
+- **Postconditions are test implementations, not acceptance criteria**. If a postcondition can be expressed as a formula (`output == f(input)`), prescribe it as the test. Agents hand-computing expected values is the #1 source of test bugs. Property-based verification (check the formula) beats example-based verification (check hardcoded values).
 - **Include the dangerous commands warning** if the task involves process execution, file watching, or streaming: agent must not use `tail -f`, `watch`, or other blocking commands.
 
 ## Anti-patterns to flag

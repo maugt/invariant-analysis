@@ -37,6 +37,8 @@ For each invariant found:
 ```
 ENFORCE InvariantName:
   property description
+  Assumes: environmental preconditions (data ordering, field presence, ownership)
+  Falsified by: concrete scenario that breaks this property
   why it matters (what breaks if violated)
   which components it spans
 
@@ -50,6 +52,10 @@ DECISION: description of choice the spec doesn't make
   options with tradeoffs (not recommendations)
   which component is affected
 ```
+
+Every invariant MUST have `Assumes` and `Falsified by`. If you can't name an
+assumption, the invariant is too vague to verify. Each `Falsified by` scenario
+becomes a required adversarial test case.
 
 Aim for 5-10 invariants, not 50. Prioritize the ones most likely to catch real bugs.
 
@@ -65,8 +71,7 @@ Reference these by name when they apply:
 - **NoFalsePositive(validator, validInputs)** — valid inputs must never be rejected
 - **NoFalseNegative(validator, invalidInputs)** — invalid inputs must always be caught
 - **IdempotentOperation(operation)** — running twice produces same result as running once
-- **AtomicGuard(sideEffect, annotation)** — if a guarded side effect succeeds but the annotation write fails, the next reconcile must not repeat the effect
-- **PathSymmetry(function, resource)** — every exit path through a function must handle resources consistently; if happy path cleans up but error path doesn't, it's violated
-- **DataExposure(secretRef, persistedResource)** — values referenced by secretKeyRef or equivalent must not be converted to literal strings before persistence (CRD spec, etcd, logs)
 - **ParseValidateConsistency(parser, validator)** — parser and validator agree on what's valid
 - **TypePreservation(source, destination)** — type information is not lost when converting between representations
+- **OrderIndependence(collection, operation)** — operation produces the same result regardless of collection ordering; if ordering matters, it must be enforced explicitly, not assumed from the data source
+- **AuthoritativeSource(field, producer, override_rules)** — when multiple producers can set a field, the override precedence must be explicit in code, not dependent on iteration order or data arrival sequence

@@ -31,9 +31,14 @@ For each invariant found:
 ```
 ENFORCE/VERIFY/CHECK InvariantName:
   property description
+  Assumes: environmental preconditions this depends on (data ordering, field presence, type guarantees)
+  Falsified by: concrete scenario that would break this property
   why it matters (what breaks if violated)
   which components it spans
 ```
+
+The `Assumes` field surfaces preconditions the code depends on but does not control.
+The `Falsified by` field names the adversarial test case that must exist.
 
 Then list open decisions:
 
@@ -49,9 +54,25 @@ DECISION: description of choice the ticket doesn't make
 - VERIFY when the property should be checked by tests (behavioral correctness, edge cases)
 - CHECK when both — the property is critical enough to need code guards AND test coverage
 
+## Surfacing assumptions
+
+For each invariant, ask: what must be true about the environment for this property to hold?
+
+Common assumption categories:
+- **Data ordering**: does the code assume a list/collection is sorted, chronological, or deduplicated?
+- **Field presence**: does the code assume a field exists, is non-nil, or has a specific type?
+- **Ownership**: does the code assume it controls the data source, or is it reading data produced elsewhere?
+- **Uniqueness**: does the code assume identifiers, keys, or names are unique?
+- **Atomicity**: does the code assume operations complete fully or not at all?
+
+If the assumption is not validated in code (assertion, guard, schema check), it is a
+latent bug. The `Falsified by` field should describe the specific scenario where the
+assumption breaks — this becomes a required test case.
+
 ## Rules
 
 - Prioritize cross-component invariants over single-function properties
 - Name invariants clearly — they become a shared vocabulary
 - Each invariant should be independently checkable against a diff
+- Every invariant must have `Assumes` and `Falsified by` — if you can't name an assumption, the invariant is too vague
 - Aim for 5-10 invariants, not 50 — focus on the ones that catch real bugs

@@ -20,16 +20,40 @@ Three verbs, three meanings:
 ```
 ENFORCE invariant_name:
   property description
+  Assumes: environmental preconditions this depends on
+  Falsified by: what input/state would break this
   (* Agent MUST add code that guarantees this — guard clauses, clamps, validation *)
 
 VERIFY invariant_name:
   property description
+  Assumes: environmental preconditions this depends on
+  Falsified by: what input/state would break this
   (* Agent MUST add tests that check this — no code enforcement needed *)
 
 CHECK invariant_name:
   property description
+  Assumes: environmental preconditions this depends on
+  Falsified by: what input/state would break this
   (* Agent must add BOTH defensive code AND tests *)
 ```
+
+### Assumes and Falsified by
+
+Every invariant depends on preconditions the code does not control. The `Assumes` field
+makes these explicit. The `Falsified by` field applies a pre-mortem lens — naming what
+would break the invariant generates the adversarial test cases needed to cover it.
+
+```
+CHECK ArtifactResolutionOrder:
+  Triage stage artifact overrides requirements for target-repos
+  Assumes: enrichment list ordered by stage completion time
+  Falsified by: enrichment list arriving in non-chronological order
+```
+
+Writing "Assumes: enrichment list ordered by stage completion time" immediately raises
+the question: is that guaranteed? If not, the implementation must enforce ordering
+explicitly rather than relying on iteration order. Each `Falsified by` scenario should
+produce at least one test case.
 
 ### Why three verbs
 
@@ -79,12 +103,18 @@ FUNCTION determinePhase(result, hasResult, podSucceeded, oomKilled,
 
 ENFORCE CostNonNegative:
   r.CostUSD >= 0 — clamp negative values to 0 in parseAgentResult
+  Assumes: CostUSD field is always present in result JSON
+  Falsified by: result JSON missing CostUSD field entirely
 
 VERIFY PhaseFromResult:
   table-driven test covering every WHEN case above
+  Assumes: result.Status values are a closed set
+  Falsified by: unknown status string not in any WHEN case
 
 CHECK NilSafety:
   parseAgentResult(nil) and determinePhase(nil, ...) never panic
+  Assumes: callers pass Go-typed nil, not zero-value structs
+  Falsified by: empty map instead of nil, empty string fields
 
 FILES: step_running.go, step_running_test.go
 BUILD: controller
